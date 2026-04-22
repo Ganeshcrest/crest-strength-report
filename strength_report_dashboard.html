@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strength Report Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #141820;
+    --surface2: #1c2130;
+    --border: #252d3d;
+    --accent: #4f9cf9;
+    --accent2: #f9614f;
+    --accent3: #4ff9b0;
+    --accent4: #f9d94f;
+    --text: #e8edf5;
+    --text2: #8a94a8;
+    --text3: #4a5568;
+    --loss: #f96b4f;
+    --gain: #4ff9b0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+
+  .logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #7b5cf9);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-subtitle { font-size: 12px; color: var(--text2); margin-top: 1px; }
+
+  .header-badge {
+    background: linear-gradient(135deg, rgba(79,156,249,0.15), rgba(123,92,249,0.15));
+    border: 1px solid rgba(79,156,249,0.3);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* UPLOAD AREA */
+  .upload-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 20px 28px 0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .upload-info { flex: 1; min-width: 200px; }
+  .upload-info h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .upload-info p { font-size: 12px; color: var(--text2); }
+
+  .upload-btn {
+    background: linear-gradient(135deg, var(--accent), #7b5cf9);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.2s;
+  }
+  .upload-btn:hover { opacity: 0.85; }
+
+  .month-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .month-tag {
+    background: rgba(79,156,249,0.1);
+    border: 1px solid rgba(79,156,249,0.3);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+  }
+
+  /* FILTERS */
+  .filters {
+    display: flex;
+    gap: 12px;
+    padding: 16px 28px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-label { font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .filter-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    min-width: 160px;
+    transition: border-color 0.2s;
+  }
+  .filter-select:focus { outline: none; border-color: var(--accent); }
+
+  .filter-reset-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.2s;
+    align-self: flex-end;
+  }
+  .filter-reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* MAIN */
+  .main { padding: 20px 28px; }
+
+  /* KPI CARDS */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: rgba(79,156,249,0.4); }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), #7b5cf9);
+  }
+
+  .kpi-card.red::before { background: linear-gradient(90deg, var(--loss), #f97b4f); }
+  .kpi-card.green::before { background: linear-gradient(90deg, var(--gain), #4fe8f9); }
+  .kpi-card.yellow::before { background: linear-gradient(90deg, var(--accent4), #f9a04f); }
+
+  .kpi-label { font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; letter-spacing: -1px; }
+  .kpi-value.red { color: var(--loss); }
+  .kpi-value.green { color: var(--gain); }
+  .kpi-value.yellow { color: var(--accent4); }
+  .kpi-sub { font-size: 12px; color: var(--text2); margin-top: 6px; }
+
+  .kpi-icon { position: absolute; right: 16px; top: 16px; font-size: 24px; opacity: 0.15; }
+
+  /* CHART GRID */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .chart-full { grid-column: 1 / -1; }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .chart-card:hover { border-color: rgba(79,156,249,0.3); }
+
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .chart-title { font-size: 14px; font-weight: 700; }
+  .chart-subtitle { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .chart-badge {
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text2);
+    background: var(--surface2);
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+
+  .chart-container { position: relative; }
+
+  /* TABLE */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .table-search {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    width: 260px;
+  }
+  .table-search::placeholder { color: var(--text3); }
+  .table-search:focus { outline: none; border-color: var(--accent); }
+
+  .table-wrap { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--text2);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(37,45,61,0.5);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 10px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .td-mono { font-family: 'IBM Plex Mono', monospace; }
+  .td-loss { color: var(--loss); font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+  .td-ok { color: var(--gain); font-family: 'IBM Plex Mono', monospace; }
+  .td-warn { color: var(--accent4); font-family: 'IBM Plex Mono', monospace; }
+
+  .eff-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eff-bar-track {
+    width: 60px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .eff-bar-fill { height: 100%; border-radius: 2px; }
+
+  .month-pill {
+    background: rgba(79,156,249,0.1);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+  }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .pagination-info { font-size: 12px; color: var(--text2); }
+
+  .pagination-btns { display: flex; gap: 6px; }
+  .page-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 24px 28px;
+    font-size: 12px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+  }
+
+  /* HIDDEN INPUT */
+  #fileInput { display: none; }
+
+  /* DRILL-DOWN PANEL */
+  .drill-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .drill-overlay.active { display: flex; }
+
+  .drill-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .drill-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .drill-title { font-size: 18px; font-weight: 700; }
+  .drill-close {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .drill-close:hover { border-color: var(--loss); color: var(--loss); }
+
+  .drill-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+
+  .drill-kpi {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .drill-kpi-label { font-size: 10px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .drill-kpi-value { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; margin-top: 4px; }
+
+  @media (max-width: 900px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .chart-full { grid-column: 1; }
+    .filters { gap: 8px; }
+    .filter-select { min-width: 130px; }
+    .drill-kpis { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .header { padding: 12px 16px; }
+    .main { padding: 16px; }
+    .filters { padding: 12px 16px; }
+    .upload-section { margin: 16px 16px 0; padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">📊</div>
+    <div>
+      <div class="header-title">Strength Report Dashboard</div>
+      <div class="header-subtitle">Manpower Analytics · MUMBAI Zone</div>
+    </div>
+  </div>
+  <div class="header-badge" id="recordCount">1,522 Records</div>
+</div>
+
+<div class="upload-section">
+  <div class="upload-info">
+    <h3>📂 Data Sources Loaded</h3>
+    <p>Upload new monthly .xls/.xlsx files to auto-append data</p>
+  </div>
+  <div class="month-tags" id="monthTags"></div>
+  <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+    ⬆ Upload New Month
+  </button>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" multiple>
+</div>
+
+<div class="filters">
+  <div class="filter-group">
+    <div class="filter-label">Month</div>
+    <select class="filter-select" id="filterMonth" onchange="applyFilters()">
+      <option value="">All Months</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">Segment</div>
+    <select class="filter-select" id="filterSegment" onchange="applyFilters()">
+      <option value="">All Segments</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">Site Name</div>
+    <select class="filter-select" id="filterLocation" onchange="applyFilters()">
+      <option value="">All Sites</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <div class="filter-label">Designation</div>
+    <select class="filter-select" id="filterDesignation" onchange="applyFilters()">
+      <option value="">All Designations</option>
+    </select>
+  </div>
+  <button class="filter-reset-btn" onclick="resetFilters()">↺ Reset</button>
+</div>
+
+<div class="main">
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi-card">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-label">Total Mandays</div>
+      <div class="kpi-value" id="kpiMandays">—</div>
+      <div class="kpi-sub">Expected working days</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-label">Total Duties</div>
+      <div class="kpi-value" id="kpiDuties">—</div>
+      <div class="kpi-sub">Actual days worked</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">📉</div>
+      <div class="kpi-label">Total Loss Days</div>
+      <div class="kpi-value red" id="kpiLossDays">—</div>
+      <div class="kpi-sub">Mandays not fulfilled</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">💸</div>
+      <div class="kpi-label">Total Loss Amount</div>
+      <div class="kpi-value red" id="kpiLossAmt">—</div>
+      <div class="kpi-sub">Revenue lost (₹)</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-icon">⚡</div>
+      <div class="kpi-label">Avg Efficiency</div>
+      <div class="kpi-value yellow" id="kpiEfficiency">—</div>
+      <div class="kpi-sub">Duties / Mandays</div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="chart-grid">
+    <div class="chart-card chart-full">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Monthly Loss Trend</div>
+          <div class="chart-subtitle">Month-on-month comparison of loss amount and efficiency</div>
+        </div>
+        <div class="chart-badge" id="trendBadge">3 months</div>
+      </div>
+      <div class="chart-container"><canvas id="trendChart" height="90"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Top 10 Sites by Loss Amount</div>
+          <div class="chart-subtitle">Click a bar to drill down into designations</div>
+        </div>
+        <div class="chart-badge" id="siteBadge">Top 10</div>
+      </div>
+      <div class="chart-container"><canvas id="siteChart" height="200"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Top 10 Designations by Loss</div>
+          <div class="chart-subtitle">Highest loss-causing roles across all sites</div>
+        </div>
+        <div class="chart-badge" id="desgBadge">Top 10</div>
+      </div>
+      <div class="chart-container"><canvas id="desgChart" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 3 -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Site Efficiency %</div>
+          <div class="chart-subtitle">Top 15 most efficient sites</div>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="effChart" height="200"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Month-wise Mandays vs Duties</div>
+          <div class="chart-subtitle">Stacked comparison by month</div>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="mandayChart" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- DATA TABLE -->
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <div class="chart-title">Detailed Breakdown</div>
+        <div class="chart-subtitle" id="tableSubtitle">Showing all records</div>
+      </div>
+      <input type="text" class="table-search" id="tableSearch" placeholder="🔍 Search sites, designations..." oninput="searchTable()">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('month')">Month ↕</th>
+            <th onclick="sortTable('location')">Site Name ↕</th>
+            <th onclick="sortTable('designation')">Designation ↕</th>
+            <th onclick="sortTable('mandays')">Mandays ↕</th>
+            <th onclick="sortTable('duties')">Duties ↕</th>
+            <th onclick="sortTable('lossDays')">Loss Days ↕</th>
+            <th onclick="sortTable('lossAmt')">Loss Amount ↕</th>
+            <th onclick="sortTable('eff')">Efficiency ↕</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="pagination-info" id="paginationInfo"></div>
+      <div class="pagination-btns" id="paginationBtns"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Strength Report Dashboard · Built for MUMBAI Zone · Supports .xlsx / .xls monthly uploads · Jan–Mar 2026 data loaded
+</div>
+
+<!-- DRILL-DOWN PANEL -->
+<div class="drill-overlay" id="drillOverlay">
+  <div class="drill-panel">
+    <div class="drill-header">
+      <div class="drill-title" id="drillTitle">Site Breakdown</div>
+      <button class="drill-close" onclick="closeDrill()">✕</button>
+    </div>
+    <div class="drill-kpis" id="drillKpis"></div>
+    <div class="chart-container"><canvas id="drillChart" height="120"></canvas></div>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────────
+// EMBEDDED DATA
+// ────────────────────────────────────────────────
+const RAW_DATA = [{"month":"Jan 2026","location":"AEKA ADVISORS","designation":"HOUSEKEEPING CUM PANTRY BOY","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":31.0,"rate":26768.64,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":100.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"ASSISTANT PROPERTY MANAGER","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":27.0,"rate":74999.61,"dayInMonth":31,"lossAmt":9677.37,"lossDays":4.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":87.1,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"FIT OUT EXECUTIVE","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":31.0,"rate":54999.88,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":100.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"FIT OUT EXECUTIVE 1","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":31.0,"rate":54999.88,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":100.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"HELP DESK EXECUTIVE","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":27.0,"rate":44999.79,"dayInMonth":31,"lossAmt":5806.42,"lossDays":4.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":87.1,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"HELP DESK EXECUTIVE 1","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":31.0,"rate":44999.79,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":100.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"HOUSEKEEPING SUPERVISOR","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":59.0,"rate":27784.77,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":25095.92,"gainedDays":28.0,"eff":190.32,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"PANTRY STAFF","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":31.0,"rate":26598.22,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":100.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"LIFTMAN","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":59.0,"rate":23999.35,"dayInMonth":31,"lossAmt":2322.52,"lossDays":3.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":95.16,"zone":"MUMBAI"},{"month":"Jan 2026","location":"HORIZON BHANDUP","designation":"PANTRY STAFF","segment":"REAL ESTATE","qty":5,"mandays":155,"duties":31.0,"rate":26598.22,"dayInMonth":31,"lossAmt":106392.88,"lossDays":124.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":20.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"HORIZON BHANDUP","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":6,"mandays":186,"duties":105.22,"rate":20748.0,"dayInMonth":31,"lossAmt":54065.27,"lossDays":80.78,"gainedAmt":0.0,"gainedDays":0.0,"eff":56.57,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL HORIZON BHANDUP PMS","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":10,"mandays":310,"duties":323.0,"rate":20573.64,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":8627.66,"gainedDays":13.0,"eff":104.19,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ASHIKA STOCK SERVICE LIMITED","designation":"HOUSEKEEPING SUPERVISOR","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":31.0,"rate":27952.35,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":100.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ASHIKA STOCK SERVICE LIMITED","designation":"PANTRY STAFF","segment":"REAL ESTATE","qty":4,"mandays":124,"duties":136.89,"rate":26771.89,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":11131.92,"gainedDays":12.89,"eff":110.4,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ASHIKA STOCK SERVICE LIMITED","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":8,"mandays":248,"duties":334.44,"rate":21962.8,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":61240.79,"gainedDays":86.44,"eff":134.85,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"FACILITY SUPERVISOR","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":28.0,"rate":33314.09,"dayInMonth":31,"lossAmt":3223.94,"lossDays":3.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":90.32,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"FACILITY MANAGER","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":36.89,"rate":59999.4,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":11399.89,"gainedDays":5.89,"eff":119.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"CORPORATE AVENUE","designation":"FACILITY MANAGER","segment":"REAL ESTATE","qty":1,"mandays":31,"duties":43.5,"rate":63000.32,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":25403.35,"gainedDays":12.5,"eff":140.32,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":309.61,"rate":21089.39,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":168449.8,"gainedDays":247.61,"eff":499.37,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"HOUSEKEEPING SUPERVISOR","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":33.72,"rate":26598.22,"dayInMonth":31,"lossAmt":24264.44,"lossDays":28.28,"gainedAmt":0.0,"gainedDays":0.0,"eff":54.39,"zone":"MUMBAI"},{"month":"Jan 2026","location":"CORPORATE AVENUE","designation":"HOUSEKEEPING SUPERVISOR","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":36.0,"rate":27863.12,"dayInMonth":31,"lossAmt":23369.07,"lossDays":26.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":58.06,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"OFFICE BOY","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":65.11,"rate":26481.45,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":2656.69,"gainedDays":3.11,"eff":105.02,"zone":"MUMBAI"},{"month":"Jan 2026","location":"CORPORATE AVENUE","designation":"FACILITY SUPERVISOR","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":81.0,"rate":34214.63,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":20970.26,"gainedDays":19.0,"eff":130.65,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"GUEST RELATIONSHIP EXECUTIVE","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":35.11,"rate":44999.53,"dayInMonth":31,"lossAmt":39033.46,"lossDays":26.89,"gainedAmt":0.0,"gainedDays":0.0,"eff":56.63,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"GUEST RELATIONSHIP EXECUTIVE 1","segment":"REAL ESTATE","qty":2,"mandays":62,"duties":30.11,"rate":44999.53,"dayInMonth":31,"lossAmt":46291.45,"lossDays":31.89,"gainedAmt":0.0,"gainedDays":0.0,"eff":48.56,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"PANTRY STAFF","segment":"REAL ESTATE","qty":3,"mandays":93,"duties":124.83,"rate":26598.22,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":27310.37,"gainedDays":31.83,"eff":134.23,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":5,"mandays":155,"duties":128.0,"rate":29701.28,"dayInMonth":31,"lossAmt":25868.86,"lossDays":27.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":82.58,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ATUL PROJECTS","designation":"VALET OPERATOR","segment":"REAL ESTATE","qty":5,"mandays":155,"duties":35.0,"rate":29701.28,"dayInMonth":31,"lossAmt":114972.7,"lossDays":120.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":22.58,"zone":"MUMBAI"},{"month":"Jan 2026","location":"CORPORATE AVENUE","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":13,"mandays":403,"duties":381.0,"rate":21277.55,"dayInMonth":31,"lossAmt":15100.2,"lossDays":22.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":94.54,"zone":"MUMBAI"},{"month":"Jan 2026","location":"CORPORATE AVENUE","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":14,"mandays":434,"duties":573.0,"rate":30510.57,"dayInMonth":31,"lossAmt":0.0,"lossDays":0.0,"gainedAmt":136805.46,"gainedDays":139.0,"eff":132.03,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ELEMENTS SALES","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":30,"mandays":930,"duties":738.0,"rate":22685.07,"dayInMonth":31,"lossAmt":140501.08,"lossDays":192.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":79.35,"zone":"MUMBAI"},{"month":"Jan 2026","location":"ELEMENTS SALES","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":50,"mandays":1550,"duties":483.0,"rate":31791.14,"dayInMonth":31,"lossAmt":1094230.53,"lossDays":1067.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":31.16,"zone":"MUMBAI"},{"month":"Jan 2026","location":"RUSTOMJEE AZZIANO CHS LTD","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":60,"mandays":1860,"duties":808.67,"rate":21614.02,"dayInMonth":31,"lossAmt":733015.09,"lossDays":1051.33,"gainedAmt":0.0,"gainedDays":0.0,"eff":43.48,"zone":"MUMBAI"},{"month":"Jan 2026","location":"SEASONS SALES - PMS","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":35,"mandays":1085,"duties":661.22,"rate":21228.74,"dayInMonth":31,"lossAmt":290203.72,"lossDays":423.78,"gainedAmt":0.0,"gainedDays":0.0,"eff":60.94,"zone":"MUMBAI"},{"month":"Jan 2026","location":"BELLA PMS","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":20,"mandays":620,"duties":303.0,"rate":37090.72,"dayInMonth":31,"lossAmt":379282.52,"lossDays":317.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":48.87,"zone":"MUMBAI"},{"month":"Jan 2026","location":"BELLA PMS","designation":"SECURITY SUPERVISOR","segment":"REAL ESTATE","qty":10,"mandays":310,"duties":62.0,"rate":43666.02,"dayInMonth":31,"lossAmt":349328.16,"lossDays":248.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":20.0,"zone":"MUMBAI"},{"month":"Jan 2026","location":"PALI PARISHRAM PREMISES","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":10,"mandays":310,"duties":65.27,"rate":24353.13,"dayInMonth":31,"lossAmt":192256.18,"lossDays":244.73,"gainedAmt":0.0,"gainedDays":0.0,"eff":21.05,"zone":"MUMBAI"},{"month":"Feb 2026","location":"ELEMENTS SALES","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":50,"mandays":1550,"duties":753.0,"rate":31791.14,"dayInMonth":31,"lossAmt":817339.95,"lossDays":797.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":48.58,"zone":"MUMBAI"},{"month":"Feb 2026","location":"RUSTOMJEE AZZIANO CHS LTD","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":60,"mandays":1860,"duties":977.17,"rate":21614.02,"dayInMonth":31,"lossAmt":615532.43,"lossDays":882.83,"gainedAmt":0.0,"gainedDays":0.0,"eff":52.54,"zone":"MUMBAI"},{"month":"Feb 2026","location":"SEASONS SALES - PMS","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":35,"mandays":1085,"duties":644.4411,"rate":21228.74,"dayInMonth":31,"lossAmt":301693.88,"lossDays":440.5589,"gainedAmt":0.0,"gainedDays":0.0,"eff":59.4,"zone":"MUMBAI"},{"month":"Feb 2026","location":"BELLA PMS","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":20,"mandays":620,"duties":306.0,"rate":37090.72,"dayInMonth":31,"lossAmt":375693.1,"lossDays":314.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":49.35,"zone":"MUMBAI"},{"month":"Feb 2026","location":"BELLA PMS","designation":"SECURITY SUPERVISOR","segment":"REAL ESTATE","qty":10,"mandays":310,"duties":66.0,"rate":43666.02,"dayInMonth":31,"lossAmt":343693.83,"lossDays":244.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":21.29,"zone":"MUMBAI"},{"month":"Feb 2026","location":"PALI PARISHRAM PREMISES","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":10,"mandays":310,"duties":76.51,"rate":24353.13,"dayInMonth":31,"lossAmt":183426.2,"lossDays":233.49,"gainedAmt":0.0,"gainedDays":0.0,"eff":24.68,"zone":"MUMBAI"},{"month":"Feb 2026","location":"CORPORATE AVENUE","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":13,"mandays":364,"duties":126.0,"rate":21277.55,"dayInMonth":28,"lossAmt":180859.18,"lossDays":238.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":34.62,"zone":"MUMBAI"},{"month":"Feb 2026","location":"CORPORATE AVENUE","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":14,"mandays":392,"duties":170.5,"rate":30510.57,"dayInMonth":28,"lossAmt":241360.4,"lossDays":221.5,"gainedAmt":0.0,"gainedDays":0.0,"eff":43.49,"zone":"MUMBAI"},{"month":"Mar 2026","location":"ELEMENTS SALES","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":50,"mandays":1400,"duties":680.0,"rate":31791.14,"dayInMonth":28,"lossAmt":817486.46,"lossDays":720.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":48.57,"zone":"MUMBAI"},{"month":"Mar 2026","location":"RUSTOMJEE AZZIANO CHS LTD","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":60,"mandays":1680,"duties":933.01,"rate":21614.02,"dayInMonth":28,"lossAmt":576623.46,"lossDays":746.99,"gainedAmt":0.0,"gainedDays":0.0,"eff":55.54,"zone":"MUMBAI"},{"month":"Mar 2026","location":"BELLA PMS","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":20,"mandays":560,"duties":318.0,"rate":37090.72,"dayInMonth":28,"lossAmt":320569.79,"lossDays":242.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":56.79,"zone":"MUMBAI"},{"month":"Mar 2026","location":"BELLA PMS","designation":"SECURITY SUPERVISOR","segment":"REAL ESTATE","qty":10,"mandays":280,"duties":56.0,"rate":43666.02,"dayInMonth":28,"lossAmt":349328.16,"lossDays":224.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":20.0,"zone":"MUMBAI"},{"month":"Mar 2026","location":"SEASONS SALES - PMS","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":35,"mandays":980,"duties":548.34,"rate":21228.74,"dayInMonth":28,"lossAmt":327271.35,"lossDays":431.66,"gainedAmt":0.0,"gainedDays":0.0,"eff":55.95,"zone":"MUMBAI"},{"month":"Mar 2026","location":"PALI PARISHRAM PREMISES","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":10,"mandays":280,"duties":84.0,"rate":24353.13,"dayInMonth":28,"lossAmt":170471.91,"lossDays":196.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":30.0,"zone":"MUMBAI"},{"month":"Mar 2026","location":"CORPORATE AVENUE","designation":"HOUSEKEEPER","segment":"REAL ESTATE","qty":13,"mandays":403,"duties":149.5,"rate":21277.55,"dayInMonth":31,"lossAmt":173995.45,"lossDays":253.5,"gainedAmt":0.0,"gainedDays":0.0,"eff":37.1,"zone":"MUMBAI"},{"month":"Mar 2026","location":"CORPORATE AVENUE","designation":"FACILITY ATTENDANT","segment":"REAL ESTATE","qty":14,"mandays":434,"duties":217.0,"rate":30510.57,"dayInMonth":31,"lossAmt":213573.99,"lossDays":217.0,"gainedAmt":0.0,"gainedDays":0.0,"eff":50.0,"zone":"MUMBAI"}];
+
+// ────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────
+let allData = [...RAW_DATA];
+let filteredData = [...allData];
+let tableData = [...allData];
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let sortCol = 'lossAmt';
+let sortDir = -1;
+let charts = {};
+
+// ────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  populateFilters();
+  applyFilters();
+  document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+});
+
+function populateFilters() {
+  const months = [...new Set(allData.map(r => r.month))].sort((a,b) => new Date('1 '+a) - new Date('1 '+b));
+  const segments = [...new Set(allData.map(r => r.segment).filter(Boolean))].sort();
+  const locations = [...new Set(allData.map(r => r.location))].sort();
+  const designations = [...new Set(allData.map(r => r.designation))].sort();
+
+  fillSelect('filterMonth', months);
+  fillSelect('filterSegment', segments);
+  fillSelect('filterLocation', locations);
+  fillSelect('filterDesignation', designations);
+
+  // Month tags
+  const tagsEl = document.getElementById('monthTags');
+  tagsEl.innerHTML = months.map(m => `<span class="month-tag">${m}</span>`).join('');
+}
+
+function fillSelect(id, options) {
+  const sel = document.getElementById(id);
+  const existing = Array.from(sel.options).map(o => o.value);
+  options.forEach(o => {
+    if (!existing.includes(o)) {
+      const opt = document.createElement('option');
+      opt.value = o; opt.textContent = o;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+function resetFilters() {
+  ['filterMonth','filterSegment','filterLocation','filterDesignation'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('tableSearch').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const month = document.getElementById('filterMonth').value;
+  const segment = document.getElementById('filterSegment').value;
+  const location = document.getElementById('filterLocation').value;
+  const designation = document.getElementById('filterDesignation').value;
+
+  filteredData = allData.filter(r =>
+    (!month || r.month === month) &&
+    (!segment || r.segment === segment) &&
+    (!location || r.location === location) &&
+    (!designation || r.designation === designation)
+  );
+
+  tableData = [...filteredData];
+  currentPage = 1;
+  updateKPIs();
+  updateCharts();
+  renderTable();
+}
+
+function searchTable() {
+  const q = document.getElementById('tableSearch').value.toLowerCase();
+  tableData = filteredData.filter(r =>
+    r.location.toLowerCase().includes(q) ||
+    r.designation.toLowerCase().includes(q) ||
+    r.month.toLowerCase().includes(q) ||
+    (r.segment || '').toLowerCase().includes(q)
+  );
+  currentPage = 1;
+  renderTable();
+}
+
+// ────────────────────────────────────────────────
+// KPIs
+// ────────────────────────────────────────────────
+function updateKPIs() {
+  const d = filteredData;
+  const totalMandays = sum(d, 'mandays');
+  const totalDuties = sum(d, 'duties');
+  const totalLossDays = sum(d, 'lossDays');
+  const totalLossAmt = sum(d, 'lossAmt');
+  const effData = d.filter(r => r.mandays > 0);
+  const avgEff = effData.length ? (sum(effData,'duties') / sum(effData,'mandays') * 100) : 0;
+
+  document.getElementById('kpiMandays').textContent = fmt(totalMandays);
+  document.getElementById('kpiDuties').textContent = fmt(totalDuties);
+  document.getElementById('kpiLossDays').textContent = fmt(totalLossDays, 1);
+  document.getElementById('kpiLossAmt').textContent = '₹'+fmtCrore(totalLossAmt);
+  document.getElementById('kpiEfficiency').textContent = avgEff.toFixed(1)+'%';
+  document.getElementById('recordCount').textContent = d.length.toLocaleString()+' Records';
+}
+
+// ────────────────────────────────────────────────
+// CHARTS
+// ────────────────────────────────────────────────
+function updateCharts() {
+  drawTrend();
+  drawSiteChart();
+  drawDesgChart();
+  drawEffChart();
+  drawMandayChart();
+}
+
+function getMonthlyAgg() {
+  const map = {};
+  filteredData.forEach(r => {
+    if (!map[r.month]) map[r.month] = { mandays:0, duties:0, lossAmt:0, lossDays:0 };
+    map[r.month].mandays += r.mandays;
+    map[r.month].duties += r.duties;
+    map[r.month].lossAmt += r.lossAmt;
+    map[r.month].lossDays += r.lossDays;
+  });
+  return map;
+}
+
+function drawTrend() {
+  const monthly = getMonthlyAgg();
+  const months = Object.keys(monthly).sort((a,b) => new Date('1 '+a)-new Date('1 '+b));
+  const lossAmts = months.map(m => monthly[m].lossAmt/100000);
+  const effs = months.map(m => monthly[m].mandays > 0 ? monthly[m].duties/monthly[m].mandays*100 : 0);
+
+  document.getElementById('trendBadge').textContent = months.length + ' months';
+
+  destroyChart('trendChart');
+  charts.trendChart = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        {
+          label: 'Loss Amount (₹ Lakhs)',
+          data: lossAmts,
+          borderColor: '#f96b4f',
+          backgroundColor: 'rgba(249,107,79,0.08)',
+          fill: true,
+          tension: 0.3,
+          pointBackgroundColor: '#f96b4f',
+          pointRadius: 5,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Avg Efficiency %',
+          data: effs,
+          borderColor: '#4ff9b0',
+          backgroundColor: 'rgba(79,249,176,0.05)',
+          fill: false,
+          tension: 0.3,
+          pointBackgroundColor: '#4ff9b0',
+          pointRadius: 5,
+          borderDash: [6,3],
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#8a94a8', font: { family: 'IBM Plex Sans', size: 12 } } },
+        tooltip: { callbacks: {
+          label: (c) => c.datasetIndex === 0 ? ` ₹${c.raw.toFixed(2)}L Loss` : ` ${c.raw.toFixed(1)}% Eff`
+        }}
+      },
+      scales: {
+        x: { ticks: { color: '#8a94a8' }, grid: { color: 'rgba(37,45,61,0.5)' } },
+        y: { ticks: { color: '#f96b4f', callback: v => '₹'+v.toFixed(0)+'L' }, grid: { color: 'rgba(249,107,79,0.1)' }, position: 'left' },
+        y1: { ticks: { color: '#4ff9b0', callback: v => v.toFixed(0)+'%' }, grid: { display: false }, position: 'right' }
+      }
+    }
+  });
+}
+
+function drawSiteChart() {
+  const map = {};
+  filteredData.forEach(r => {
+    if (!map[r.location]) map[r.location] = 0;
+    map[r.location] += r.lossAmt;
+  });
+  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const labels = sorted.map(e=>truncate(e[0],20));
+  const vals = sorted.map(e=>e[1]/100000);
+
+  document.getElementById('siteBadge').textContent = 'Top 10 of '+(Object.keys(map).length);
+
+  destroyChart('siteChart');
+  charts.siteChart = new Chart(document.getElementById('siteChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Loss Amount (₹ Lakhs)',
+        data: vals,
+        backgroundColor: vals.map((v,i) => `hsla(${10+i*8},90%,60%,0.8)`),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ₹${c.raw.toFixed(2)} Lakhs` } }
+      },
+      scales: {
+        x: { ticks: { color: '#8a94a8', callback: v=>'₹'+v.toFixed(0)+'L' }, grid: { color: 'rgba(37,45,61,0.5)' } },
+        y: { ticks: { color: '#e8edf5', font: { size: 11 } }, grid: { display: false } }
+      },
+      onClick: (e, el) => {
+        if (el.length) {
+          const idx = el[0].index;
+          const site = sorted[idx][0];
+          openDrill(site);
+        }
+      }
+    }
+  });
+}
+
+function drawDesgChart() {
+  const map = {};
+  filteredData.forEach(r => {
+    if (!map[r.designation]) map[r.designation] = 0;
+    map[r.designation] += r.lossAmt;
+  });
+  const sorted = Object.entries(map).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const labels = sorted.map(e=>truncate(e[0],18));
+  const vals = sorted.map(e=>e[1]/100000);
+
+  destroyChart('desgChart');
+  charts.desgChart = new Chart(document.getElementById('desgChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Loss Amount (₹ Lakhs)',
+        data: vals,
+        backgroundColor: vals.map((v,i) => `hsla(${220+i*15},80%,60%,0.8)`),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ₹${c.raw.toFixed(2)} Lakhs` } }
+      },
+      scales: {
+        x: { ticks: { color: '#8a94a8', callback: v=>'₹'+v.toFixed(0)+'L' }, grid: { color: 'rgba(37,45,61,0.5)' } },
+        y: { ticks: { color: '#e8edf5', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function drawEffChart() {
+  const map = {};
+  const cnt = {};
+  filteredData.forEach(r => {
+    if (!map[r.location]) { map[r.location] = 0; cnt[r.location] = 0; }
+    map[r.location] += r.mandays > 0 ? (r.duties/r.mandays*100) : 0;
+    cnt[r.location]++;
+  });
+  const avgs = Object.keys(map).map(k=>({loc:k, eff: map[k]/cnt[k]}));
+  const sorted = avgs.sort((a,b)=>b.eff-a.eff).slice(0,15);
+
+  destroyChart('effChart');
+  charts.effChart = new Chart(document.getElementById('effChart'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e=>truncate(e.loc,16)),
+      datasets: [{
+        label: 'Avg Efficiency %',
+        data: sorted.map(e=>Math.min(e.eff,200)),
+        backgroundColor: sorted.map(e => e.eff>=100 ? 'rgba(79,249,176,0.7)' : e.eff>=80 ? 'rgba(249,217,79,0.7)' : 'rgba(249,107,79,0.7)'),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ${c.raw.toFixed(1)}%` } }
+      },
+      scales: {
+        x: { ticks: { color: '#8a94a8', callback: v=>v+'%' }, grid: { color: 'rgba(37,45,61,0.5)' }, max: 200 },
+        y: { ticks: { color: '#e8edf5', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function drawMandayChart() {
+  const monthly = getMonthlyAgg();
+  const months = Object.keys(monthly).sort((a,b)=>new Date('1 '+a)-new Date('1 '+b));
+
+  destroyChart('mandayChart');
+  charts.mandayChart = new Chart(document.getElementById('mandayChart'), {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        {
+          label: 'Mandays',
+          data: months.map(m=>monthly[m].mandays),
+          backgroundColor: 'rgba(79,156,249,0.6)',
+          borderRadius: 4
+        },
+        {
+          label: 'Duties',
+          data: months.map(m=>monthly[m].duties),
+          backgroundColor: 'rgba(79,249,176,0.6)',
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8a94a8', font: { size: 12 } } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw.toLocaleString()}` } }
+      },
+      scales: {
+        x: { ticks: { color: '#8a94a8' }, grid: { color: 'rgba(37,45,61,0.5)' } },
+        y: { ticks: { color: '#8a94a8', callback: v=>v.toLocaleString() }, grid: { color: 'rgba(37,45,61,0.5)' } }
+      }
+    }
+  });
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ────────────────────────────────────────────────
+// DRILL DOWN
+// ────────────────────────────────────────────────
+function openDrill(site) {
+  const siteData = filteredData.filter(r=>r.location===site);
+  document.getElementById('drillTitle').textContent = '📍 ' + site;
+
+  const totalMandays = sum(siteData,'mandays');
+  const totalDuties = sum(siteData,'duties');
+  const totalLoss = sum(siteData,'lossAmt');
+  const eff = totalMandays > 0 ? (totalDuties/totalMandays*100).toFixed(1) : 0;
+
+  document.getElementById('drillKpis').innerHTML = `
+    <div class="drill-kpi"><div class="drill-kpi-label">Total Mandays</div><div class="drill-kpi-value">${fmt(totalMandays)}</div></div>
+    <div class="drill-kpi"><div class="drill-kpi-label">Total Duties</div><div class="drill-kpi-value">${fmt(totalDuties)}</div></div>
+    <div class="drill-kpi"><div class="drill-kpi-label">Total Loss</div><div class="drill-kpi-value" style="color:var(--loss)">₹${fmtCrore(totalLoss)}</div></div>
+  `;
+
+  const desgMap = {};
+  siteData.forEach(r => {
+    if (!desgMap[r.designation]) desgMap[r.designation] = { loss: 0, month: r.month };
+    desgMap[r.designation].loss += r.lossAmt;
+  });
+  const sorted = Object.entries(desgMap).sort((a,b)=>b[1].loss-a[1].loss).slice(0,12);
+
+  destroyChart('drillChart');
+  charts.drillChart = new Chart(document.getElementById('drillChart'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e=>truncate(e[0],22)),
+      datasets: [{
+        label: 'Loss Amount (₹)',
+        data: sorted.map(e=>e[1].loss),
+        backgroundColor: sorted.map((e,i)=>`hsla(${15+i*20},85%,60%,0.8)`),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ₹${c.raw.toLocaleString('en-IN', {maximumFractionDigits:0})}` } }
+      },
+      scales: {
+        x: { ticks: { color: '#8a94a8', callback: v=>'₹'+fmt(v) }, grid: { color: 'rgba(37,45,61,0.5)' } },
+        y: { ticks: { color: '#e8edf5', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+
+  document.getElementById('drillOverlay').classList.add('active');
+}
+
+function closeDrill() {
+  document.getElementById('drillOverlay').classList.remove('active');
+  destroyChart('drillChart');
+}
+
+// ────────────────────────────────────────────────
+// TABLE
+// ────────────────────────────────────────────────
+function sortTable(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = -1; }
+  tableData.sort((a,b) => {
+    const av = typeof a[col] === 'string' ? a[col] : (a[col]||0);
+    const bv = typeof b[col] === 'string' ? b[col] : (b[col]||0);
+    return typeof av === 'string' ? av.localeCompare(bv)*sortDir : (av-bv)*sortDir;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function renderTable() {
+  const start = (currentPage-1)*PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+  const page = tableData.slice(start, end);
+
+  document.getElementById('tableSubtitle').textContent =
+    `Showing ${tableData.length.toLocaleString()} records`;
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = page.map(r => {
+    const eff = Math.min(r.eff, 200);
+    const effColor = eff >= 100 ? '#4ff9b0' : eff >= 80 ? '#f9d94f' : '#f96b4f';
+    return `<tr>
+      <td><span class="month-pill">${r.month}</span></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${r.location}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;color:var(--text2)">${r.designation}</td>
+      <td class="td-mono">${r.mandays.toLocaleString()}</td>
+      <td class="td-mono">${(r.duties||0).toFixed(1)}</td>
+      <td class="${r.lossDays > 0 ? 'td-loss' : 'td-ok'}">${(r.lossDays||0).toFixed(1)}</td>
+      <td class="${r.lossAmt > 0 ? 'td-loss' : 'td-ok'}">₹${(r.lossAmt||0).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td>
+        <div class="eff-bar">
+          <div class="eff-bar-track"><div class="eff-bar-fill" style="width:${Math.min(eff,100)}%;background:${effColor}"></div></div>
+          <span style="color:${effColor};font-family:'IBM Plex Mono',monospace;font-size:12px">${(r.eff||0).toFixed(1)}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = tableData.length;
+  const totalPages = Math.ceil(total/PAGE_SIZE);
+  const start = (currentPage-1)*PAGE_SIZE+1;
+  const end = Math.min(currentPage*PAGE_SIZE, total);
+
+  document.getElementById('paginationInfo').textContent =
+    `Showing ${start.toLocaleString()}–${end.toLocaleString()} of ${total.toLocaleString()} records`;
+
+  const btns = document.getElementById('paginationBtns');
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i===1||i===totalPages||Math.abs(i-currentPage)<=1) pages.push(i);
+    else if (pages[pages.length-1]!=='…') pages.push('…');
+  }
+
+  btns.innerHTML = `
+    <button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>
+    ${pages.map(p => p==='…' ? `<button class="page-btn" disabled>…</button>` :
+      `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`
+    ).join('')}
+    <button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>
+  `;
+}
+
+function goPage(p) {
+  const totalPages = Math.ceil(tableData.length/PAGE_SIZE);
+  if (p<1||p>totalPages) return;
+  currentPage = p;
+  renderTable();
+}
+
+// ────────────────────────────────────────────────
+// FILE UPLOAD (CSV/XLSX parsing)
+// ────────────────────────────────────────────────
+function handleFileUpload(e) {
+  const files = e.target.files;
+  if (!files.length) return;
+
+  // Show feedback
+  const btn = document.querySelector('.upload-btn');
+  btn.textContent = '⏳ Processing...';
+
+  let processed = 0;
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target.result;
+        const newRows = parseCSV(text, file.name);
+        if (newRows.length) {
+          // Remove existing records for same month to avoid duplicates
+          const newMonths = [...new Set(newRows.map(r=>r.month))];
+          allData = allData.filter(r=>!newMonths.includes(r.month));
+          allData = allData.concat(newRows);
+          populateFilters();
+          applyFilters();
+          alert(`✅ Loaded ${newRows.length} records from ${file.name}`);
+        }
+      } catch(err) {
+        alert('⚠️ Could not parse ' + file.name + '. Please ensure it is a valid CSV exported from Excel.');
+      }
+      processed++;
+      if (processed === files.length) {
+        btn.innerHTML = '⬆ Upload New Month';
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+function parseCSV(text, filename) {
+  const lines = text.split('\n').filter(l=>l.trim());
+  if (!lines.length) return [];
+  const headers = lines[0].split(',').map(h=>h.replace(/"/g,'').trim().toUpperCase());
+  const rows = [];
+  for (let i=1;i<lines.length;i++) {
+    const vals = lines[i].split(',').map(v=>v.replace(/"/g,'').trim());
+    if (vals.length < 5) continue;
+    const obj = {};
+    headers.forEach((h,idx) => obj[h] = vals[idx]);
+    // Map columns
+    const row = {
+      month: obj['MONTHYEAR'] || obj['MONTH'] || '',
+      location: obj['LOCATION'] || obj['SITE NAME'] || '',
+      designation: obj['DESIGNATION'] || '',
+      segment: obj['SEGMENT'] || 'REAL ESTATE',
+      qty: parseFloat(obj['QTY'])||1,
+      mandays: parseFloat(obj['TOTAL MANDAYS'])||0,
+      duties: parseFloat(obj['NOS OF DUTIES'])||0,
+      rate: parseFloat(obj['RATE'])||0,
+      dayInMonth: parseFloat(obj['DAY IN MONTH'])||31,
+      lossAmt: Math.abs(parseFloat(obj['OPPORTUNITY LOST (AMOUNT)'])||0),
+      lossDays: Math.abs(parseFloat(obj['OPPORTUNITY LOST (MANDAYS)'])||0),
+      gainedAmt: parseFloat(obj['OPPORTUNITY GAINED (AMOUNT)'])||0,
+      gainedDays: parseFloat(obj['OPPORTUNITY GAINED (MANDAYS)'])||0,
+      zone: obj['ZONE / BRANCH'] || 'MUMBAI'
+    };
+    // Parse month label
+    if (row.month && row.month.includes('-')) {
+      const d = new Date(row.month);
+      if (!isNaN(d)) row.month = d.toLocaleString('en',{month:'short'})+' '+d.getFullYear();
+    }
+    row.eff = row.mandays > 0 ? (row.duties/row.mandays*100) : 0;
+    if (row.location && row.designation && row.mandays>0) rows.push(row);
+  }
+  return rows;
+}
+
+// ────────────────────────────────────────────────
+// HELPERS
+// ────────────────────────────────────────────────
+function sum(arr, key) { return arr.reduce((s,r)=>s+(r[key]||0),0); }
+function fmt(n, dec=0) { return parseFloat(n||0).toLocaleString('en-IN',{maximumFractionDigits:dec}); }
+function fmtCrore(n) {
+  if (n >= 10000000) return (n/10000000).toFixed(2)+' Cr';
+  if (n >= 100000) return (n/100000).toFixed(2)+' L';
+  if (n >= 1000) return (n/1000).toFixed(1)+' K';
+  return n.toFixed(0);
+}
+function truncate(s, n) { return s && s.length > n ? s.substring(0,n)+'…' : s; }
+</script>
+</body>
+</html>
